@@ -1,0 +1,4 @@
+venv/
+.idea/
+subtitles/
+vtt_to_srt/__pycache__/

@@ -3,6 +3,8 @@
 import json
 import urllib.request
 import argparse
+from vtt_to_srt.__main__ import vtt_to_srt
+import pathlib
 
 parser = argparse.ArgumentParser()
 parser.add_argument("url", metavar='URL', help="content URL")
@@ -16,7 +18,6 @@ content_api_url = json_api_url.format(content_id)
 
 
 raw_json_data = urllib.request.urlopen(content_api_url).read().decode()
-# Parse raw json data to object
 json_data = json.loads(raw_json_data)
 
 print("Video:")
@@ -32,11 +33,22 @@ for media_file in json_data['response']['mediaFiles']:
 
 # Subtitle output
 if "subtitles" in json_data['response']:
-    subtitles = json_data['response']['subtitles'][0]['file']
+    subtitles_url = json_data['response']['subtitles'][0]['file']
     subtitles_language = json_data['response']['subtitles'][0]['language']
     
     print("Subtitles:")
-    print("\tURL:\t\t{0}".format(subtitles, subtitles_language))
-    print("\tlanguage:\t{0}".format(subtitles_language))
+    print("\tURL:\t\t{0}".format(subtitles_url, subtitles_language))
+    print("\tlanguage:\t{0}\n".format(subtitles_language))
+
+    user_input = input("Do you want to download and convert vtt subtitles to srt? (yes/no)").lower()
+    if user_input[0] == 'y':
+        subtitles_filename_vtt = subtitles_url.split('/')[-1]
+        pathlib.Path("subtitles").mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(subtitles_url, 'subtitles/' + subtitles_filename_vtt)
+        vtt_to_srt('subtitles/' + subtitles_filename_vtt)
+        print("Subtitles downloaded to {0}/subtitles".format(pathlib.Path().absolute()))
+        print("Done.")
+    else:
+        print("Exiting.")
 
 exit(0)

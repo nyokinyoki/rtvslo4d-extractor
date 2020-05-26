@@ -6,15 +6,28 @@ import argparse
 from vtt_to_srt.__main__ import vtt_to_srt
 import pathlib
 
+
+# https://stackoverflow.com/a/1094933
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("url", metavar='URL', help="content URL")
 args = parser.parse_args()
 
 content_url = args.url
-json_api_url = "http://api.rtvslo.si/ava/getRecording/{0}?client_id=82013fb3a531d5414f478747c1aca622"
+
+# API URL sourced from @Randomness: https://slo-tech.com/forum/t598506/p6736691#p6736691
+json_api_url = "https://api.rtvslo.si/ava/getMedia/{0}?client_id={1}"
+json_api_client_id = "82013fb3a531d5414f478747c1aca622&jwt=qYRYxFVkMT9blEBOr28QzoIxOfRrb5U_r7dS6L_rqos"
 
 content_id = content_url.split('/')[-1]
-content_api_url = json_api_url.format(content_id)
+content_api_url = json_api_url.format(content_id, json_api_client_id)
 
 
 raw_json_data = urllib.request.urlopen(content_api_url).read().decode()
@@ -24,17 +37,24 @@ print("Video:")
 for media_file in json_data['response']['mediaFiles']:
     resolution_width = media_file['width']
     resolution_height = media_file['height']
-    streamer_url = media_file['streamers']['http']
-    filename = media_file['filename']
+    streamer_url = media_file['streams']['http']
+    #filename = media_file['filename']
+    filesize = media_file['filesize']
 
-    print("\tURL:\t\t{0}/{1}".format(streamer_url, filename))
+    print("\tURL:\t\t{0}".format(streamer_url))
     print("\tresolution:\t{0}x{1}".format(resolution_width, resolution_height))
+    print("\tfile size:\t{0}".format(sizeof_fmt(filesize)))
 
 
 # Subtitle output
-if "subtitles" in json_data['response']:
-    subtitles_url = json_data['response']['subtitles'][0]['file']
-    subtitles_language = json_data['response']['subtitles'][0]['language']
+json_api_subtitle_url = "http://api.rtvslo.si/ava/getRecording/{0}?client_id=82013fb3a531d5414f478747c1aca622"
+content_subtitle_api_url = json_api_subtitle_url.format(content_id)
+raw_json_subtitle_data = urllib.request.urlopen(content_subtitle_api_url).read().decode()
+json_subtitle_data = json.loads(raw_json_subtitle_data)
+
+if "subtitles" in json_subtitle_data['response']:
+    subtitles_url = json_subtitle_data['response']['subtitles'][0]['file']
+    subtitles_language = json_subtitle_data['response']['subtitles'][0]['language']
     
     print("Subtitles:")
     print("\tURL:\t\t{0}".format(subtitles_url, subtitles_language))
